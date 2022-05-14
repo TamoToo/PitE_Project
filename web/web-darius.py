@@ -32,19 +32,20 @@ import streamlit as st
 darius=Image.open("darius.gif")
 st.set_page_config(page_title="Darius Crypto Prediction", page_icon=darius)
 
-def fetch_data(start=1640991600000, stop=1651356000000, symbol='btcusd', interval='1D', step=31536000000):
+def fetch_data(start=1640991600000, stop=1651356000000, symbol='btcusd', interval='1D', step=86400000):
     # Create api instance
     api_v2 = bitfinex.bitfinex_v2.api_v2()
-
+    intervals_dict = {"1m": 60000, "5m": 300000, "15m": 900000, "30m": 1800000, "1h": 3600000, "3h": 10800000, "6h": 21600000, "12h": 43200000, "1D": 86400000, "7D": 604800000, "14D": 1209600000, "1M": 2628000000}
+    step = intervals_dict[interval] * 1000
     data = []
     names = ['time', 'open', 'close', 'high', 'low', 'volume']
 
     if stop > time.time() * 1000: # stop value can't be higher than datetime.now()
         stop = datetime.now()
         stop = time.mktime(stop.timetuple()) * 1000
-    if stop - start > step: # if data requested > 365 days
+    if stop - start > step: # if data requested > 1000 * interval
         while start < stop:
-            if start + step > stop: # if start + 365 days > stop => stop = now
+            if start + step > stop: # if start + 1000 * interval > stop ==> stop = now
                 end = datetime.now()
                 end = time.mktime(end.timetuple()) * 1000
             else:
@@ -60,13 +61,13 @@ def fetch_data(start=1640991600000, stop=1651356000000, symbol='btcusd', interva
     #print(data)
 
     # Modify data to send back a clean DataFrame
-    df = pd.DataFrame(data, columns=names)
-    df['time'] = pd.to_datetime(df['time'], unit='ms')
-    df = df.sort_values(by='time')
-    df.reset_index(inplace=True)
-    df.drop('index', axis=1, inplace=True)
-    df.rename(columns={'time':'date'}, inplace=True)
-    return df
+    dataframe = pd.DataFrame(data, columns=names)
+    dataframe['time'] = pd.to_datetime(dataframe['time'], unit='ms')
+    dataframe = dataframe.sort_values(by='time')
+    dataframe.reset_index(inplace=True)
+    dataframe.drop('index', axis=1, inplace=True)
+    dataframe.rename(columns={'time':'date'}, inplace=True)
+    return dataframe
 
 st.sidebar.markdown("### The Darius description ")
 st.sidebar.markdown("Darius' attacks and damaging abilities cause enemies to bleed for physical damage over 5 seconds, stacking up to 5 times. Darius enrages and gains massive Attack Damage when his target reaches max stacks.")
