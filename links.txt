@@ -1,0 +1,8 @@
+https://medium.com/coinmonks/how-to-get-historical-crypto-currency-data-954062d40d2d
+https://www.analyticsvidhya.com/blog/2021/10/machine-learning-for-stock-market-prediction-with-step-by-step-implementation/
+https://machinelearningmastery.com/time-series-prediction-lstm-recurrent-neural-networks-python-keras/
+https://github.com/scikit-learn/scikit-learn/issues/14564
+https://www.kaggle.com/code/ysthehurricane/bitcoin-dogecoin-etc-price-prediction-xgboost/notebook
+https://www.kaggle.com/code/ysthehurricane/advanced-stock-pred-using-svr-rfr-knn-lstm-gru/notebook
+https://www.youtube.com/watch?v=H6du_pfuznE
+https://github.com/jackpraveenraj/Stock-Prediction-Using-Stacked-LSTM/blob/main/Stock%20Prediction%20Using%20LSTM.ipynb
