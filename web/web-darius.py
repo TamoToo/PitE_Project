@@ -8,7 +8,7 @@ import time
 from PIL import Image
 
 
-# ML methods
+# ML methodsP
 from sklearn.metrics import classification_report
 from sklearn.metrics import confusion_matrix
 from sklearn.metrics import accuracy_score
@@ -62,12 +62,16 @@ def fetch_data(start=1640991600000, stop=1651356000000, symbol='btcusd', interva
 
     # Modify data to send back a clean DataFrame
     dataframe = pd.DataFrame(data, columns=names)
-    dataframe['time'] = pd.to_datetime(dataframe['time'], unit='ms')
+    dataframe['time'] = pd.to_datetime(dataframe['time'], unit='ms').dt.normalize()
     dataframe = dataframe.sort_values(by='time')
     dataframe.reset_index(inplace=True)
     dataframe.drop('index', axis=1, inplace=True)
     dataframe.rename(columns={'time':'date'}, inplace=True)
     return dataframe
+
+
+
+
 
 st.sidebar.markdown("### The Darius description ")
 st.sidebar.markdown("Darius' attacks and damaging abilities cause enemies to bleed for physical damage over 5 seconds, stacking up to 5 times. Darius enrages and gains massive Attack Damage when his target reaches max stacks.")
@@ -80,6 +84,9 @@ with _left:
 
 with _right:
    st.image("bite.gif", use_column_width=True)
+
+
+
 
 
 
@@ -116,7 +123,11 @@ else:
     if find:
         st.write("You have chosen the pair: ", pair)
         st.write("Please choose the interval of the data you want to use")
-        interval = st.selectbox("Choose the interval", ["1m", "5m", "15m", "30m", "1h", "3h", "6h", "12h", "1D", "7D", "14D", "1M"])
+        st.write("Please be aware that if you choose a short interval, the function may take a long time.")
+        ## We set a default value at 1D for the interval
+        values = ["1m","5m", "15m", "30m", "1h", "3h", "6h", "12h", "1D", "7D", "14D", "1M"]
+        default_ix = values.index("1D")
+        interval = st.selectbox('Choose the interval', values, index=default_ix)
         st.write("You have chosen the interval: ", interval)
         st.write("Please choose the start date of the data you want to use")
         start = st.date_input("Start date", datetime(2019, 1, 1))
@@ -127,7 +138,6 @@ else:
 
         df = fetch_data(start=time.mktime(start.timetuple()) * 1000, stop=time.mktime(end.timetuple()) * 1000, symbol=pair, interval=interval)
         st.write(df)
-        st.write("The dataframe has been created")
         st.write("Please choose the number of the data you want to use")
         nb_data = st.slider("Choose the number of data you want to use", min_value=1, max_value=len(df), value=len(df))
         st.write("You have chosen the number of data: ", nb_data)
@@ -135,23 +145,60 @@ else:
         st.write(df)
         st.write("The dataframe has been created")
         
-        #t_start = datetime(2009, 1, 1, 0, 0)
-        #t_start = time.mktime(t_start.timetuple()) * 1000
-        #t_stop = datetime(2023, 1, 1, 0, 0)
-        #t_stop = time.mktime(t_stop.timetuple()) * 1000
-        #df = fetch_data(start=t_start, stop=t_stop, symbol=pair)
-        #st.write(df)
-        #st.write("The dataframe has been created")
 
 
 
-#pair = str.lower(st.text_input("Enter the pair to use", "btcusd"))
-#st.title(pair)
+## function to create datasplit depending of the date starting the prediction
+X_scaler = MinMaxScaler(feature_range=(0,1))
+y_scaler = MinMaxScaler(feature_range=(0,1))
 
-##intervals = st.text_input("Enter the number of day for the interval", "1D ,2D ,3D")
-#t_start = datetime(2009, 1, 1, 0, 0)
-#t_start = time.mktime(t_start.timetuple()) * 1000
-#t_stop = datetime(2023, 1, 1, 0, 0)
-#t_stop = time.mktime(t_stop.timetuple()) * 1000
-#df = fetch_data(start=t_start, stop=t_stop, symbol=pair)
-#st.write(df)
+def SplitData(Data, Date, lstm=0, X_scaler=X_scaler, y_scaler=y_scaler):
+  print(Data)
+  st.write(Data)
+  index = Data.index[Data['date'] == Date][0]
+  X = Data.drop(columns=['date', 'close'], axis=1).to_numpy()
+  y = Data['close'].to_numpy()
+
+  if lstm:
+    X = X_scaler.fit_transform(np.array(X))
+    y = y_scaler.fit_transform(np.array(y).reshape(-1,1))
+
+    X_train = X[:index]
+    y_train = y[:index]
+    X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
+
+    X_test = X[index:]
+    y_test = y[index:]
+    X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
+
+  else:
+    X_train = X[:index]
+    y_train = y[:index]
+    X_test = X[index:]
+    y_test = y[index:]
+
+  return X_train, y_train, X_test, y_test
+
+
+st.subheader("Linear Regression")
+st.write("Please select the date when you want to start the prediction")
+start_prediction = st.date_input("Start prediction", min_value=start, max_value=datetime.now())
+st.write("You have chosen the start date: ", start_prediction)
+
+X_train, y_train, X_test, y_test = SplitData(df,start_prediction)
+
+linear_regression_model = LinearRegression()
+linear_regression_model.fit(X_train, y_train)
+st.write("Fit the model...")
+
+
+#first we predict using train set and then we use the test set to evaluate the model
+linear_regression_train_predict=linear_regression_model.predict(X_train)
+linear_regression_validation_predict=linear_regression_model.predict(X_test)
+st.write("The linear regression model has been trained...")
+st.write("The linear regression model has been evaluated...")
+st.write("Train data prediction: ", linear_regression_train_predict.shape)
+st.write("Validation data prediction: ", linear_regression_validation_predict.shape)
+st.write("Mean Absolute Error - MAE :" + str(mean_absolute_error(y_test, linear_regression_validation_predict)))
+
+
