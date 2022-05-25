@@ -25,6 +25,7 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error, explained_v
 from keras.callbacks import LearningRateScheduler
 from keras.metrics import RootMeanSquaredError
 from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import GridSearchCV
 
 import streamlit as st
 
@@ -185,7 +186,7 @@ st.write("Please select the date when you want to start the prediction")
 start_prediction = st.date_input("Start prediction", min_value=start, max_value=datetime.now())
 st.write("You have chosen the start date: ", start_prediction)
 
-X_train, y_train, X_test, y_test = SplitData(df,start_prediction)
+X_train, y_train, X_test, y_test = SplitData(df,str(start_prediction))
 
 linear_regression_model = LinearRegression()
 linear_regression_model.fit(X_train, y_train)
@@ -201,4 +202,50 @@ st.write("Train data prediction: ", linear_regression_train_predict.shape)
 st.write("Validation data prediction: ", linear_regression_validation_predict.shape)
 st.write("Mean Absolute Error - MAE :" + str(mean_absolute_error(y_test, linear_regression_validation_predict)))
 
+train_size = X_train.shape[0]
+f,axs = plt.subplots(1,2,figsize=(20,10))
 
+axs[0].plot(df['date'][:train_size], df['close'][:train_size], color='black')
+axs[0].plot(df['date'][train_size:], linear_regression_validation_predict, color='red')
+axs[0].plot(df['date'][train_size:], df['close'][train_size:], color='green')
+axs[1].plot(df['date'][train_size:], linear_regression_validation_predict, color='red')
+axs[1].plot(df['date'][train_size:], df['close'][train_size:], color='green')
+
+
+st.pyplot(fig=f)
+
+lr_gs_model = LinearRegression()
+
+# parameters that we will try to tune
+params_lr_gs = {
+    'n_jobs': range(1, 1000),
+}
+
+param_search = GridSearchCV( estimator=lr_gs_model, param_grid=params_lr_gs,
+                verbose=1)
+                
+param_search.fit(X_train, y_train)
+
+best_score = param_search.best_score_
+best_params = param_search.best_params_
+
+st.write("The best score is: ", best_score, "with the following parameters: ", best_params)
+
+lr_final_model = LinearRegression(**best_params)
+lr_final_model.fit(X_train, y_train)
+lr_final_train_predict=lr_final_model.predict(X_train)
+lr_final_validation_predict=lr_final_model.predict(X_test)
+
+st.write("Train data prediction: ",lr_final_train_predict.shape)
+st.write("Validation data prediction: ", lr_final_validation_predict.shape)
+st.write("Mean Absolute Error - MAE :" + str(mean_absolute_error(y_test, lr_final_validation_predict)))
+
+train_size = X_train.shape[0]
+f,axs = plt.subplots(1,2,figsize=(20,10))
+
+axs[0].plot(df['date'][:train_size], df['close'][:train_size], color='black')
+axs[0].plot(df['date'][train_size:], lr_final_validation_predict, color='red')
+axs[0].plot(df['date'][train_size:], df['close'][train_size:], color='green')
+axs[1].plot(df['date'][train_size:], lr_final_validation_predict, color='red')
+axs[1].plot(df['date'][train_size:], df['close'][train_size:], color='green')
+st.pyplot(fig=f)
