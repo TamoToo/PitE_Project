@@ -4,8 +4,12 @@ from matplotlib import pyplot as plt
 import bitfinex
 from datetime import datetime
 import time
+from math import sqrt
 import streamlit as st
-from sklearn.preprocessing import MinMaxScaler
+
+from keras.models import Sequential
+from keras.layers import LSTM, Dense, Dropout, Activation
+from sklearn.metrics import mean_squared_error, mean_absolute_error, explained_variance_score, r2_score
 
 def fetch_data(start=1640991600000, stop=1651356000000, symbol='btcusd', interval='1D', step=86400000):
     # Create api instance
@@ -44,32 +48,27 @@ def fetch_data(start=1640991600000, stop=1651356000000, symbol='btcusd', interva
     dataframe.rename(columns={'time':'date'}, inplace=True)
     return dataframe
 
-def split_data(data, date, lstm=0, X_scaler=MinMaxScaler(feature_range=(0,1)), y_scaler=MinMaxScaler(feature_range=(0,1))):
+def split_data(df, date):
+    data = df.copy()
     data.reset_index(inplace=True)
     index = data.index[data['date'] == date][0]
     X = data.drop(columns=['index', 'date', 'close'], axis=1).to_numpy()
     y = data['close'].to_numpy()
+    st.write(X.shape)
+    return X, y, index
 
-    if lstm:
-        X = X_scaler.fit_transform(np.array(X))
-        y = y_scaler.fit_transform(np.array(y).reshape(-1,1))
-
-        X_train = X[:index]
-        y_train = y[:index]
-        X_train = np.reshape(X_train, (X_train.shape[0], X_train.shape[1], 1))
-
-        X_test = X[index:]
-        y_test = y[index:]
-        X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
-
-    else:
-        X_train = X[:index]
-        y_train = y[:index]
-        X_test = X[index:]
-        y_test = y[index:]
-
-    return X_train, y_train, X_test, y_test
-
+def show_errors(y_train, y_test, train_prediction, test_prediction):
+    st.write("Train data RMSE: ", sqrt(mean_squared_error(y_train,train_prediction)))
+    st.write("Train data MSE: ", mean_squared_error(y_train,train_prediction))
+    st.write("Train data MAE: ", mean_absolute_error(y_train,train_prediction))
+    st.write("Train data explained variance regression score:", explained_variance_score(y_train, train_prediction))
+    st.write("Train data R2 score:", r2_score(y_train, train_prediction))
+    st.write("-------------------------------------------------------------------------------------")
+    st.write("Test data RMSE: ", sqrt(mean_squared_error(y_test,test_prediction)))
+    st.write("Test data MSE: ", mean_squared_error(y_test,test_prediction))
+    st.write("Test data MAE: ", mean_absolute_error(y_test,test_prediction))
+    st.write("Test data explained variance regression score:", explained_variance_score(y_test, test_prediction))
+    st.write("Test data R2 score:", r2_score(y_test, test_prediction))
 
 def plot_results(df, train_size, prediction):
     f,axs = plt.subplots(1,2,figsize=(40,20))
@@ -78,14 +77,27 @@ def plot_results(df, train_size, prediction):
     axs[0].plot(df['date'][:train_size], df['close'][:train_size], color='black')
     axs[0].plot(df['date'][train_size:], df['close'][train_size:], color='green')
     axs[0].plot(df['date'][train_size:], prediction, color='red')
-    axs[0].legend(['train', 'test', 'prediction'])
+    axs[0].legend(['train', 'test', 'prediction'], prop={'size': 84})
 
     axs[1].set_title("Zoomed on prediction")
     axs[1].plot(df['date'][train_size:], df['close'][train_size:], color='green')
     axs[1].plot(df['date'][train_size:], prediction, color='red')
-    axs[1].legend(['test', 'prediction'])
+    axs[1].legend(['test', 'prediction'], prop={'size': 84})
 
     for ax in axs.flat:
         ax.set(xlabel="Time", ylabel="Price in $")
 
     st.pyplot(fig=f)
+
+
+
+def build_lstm_model(input_data, output_size, neurons=100, activ_func='linear',
+                     dropout=0.2, loss='mse', optimizer='adam'):
+    model = Sequential()
+    model.add(LSTM(neurons, input_shape=(input_data.shape[1], input_data.shape[2])))
+    model.add(Dropout(dropout))
+    model.add(Dense(units=output_size))
+    model.add(Activation(activ_func))
+
+    model.compile(loss=loss, optimizer=optimizer)
+    return model
