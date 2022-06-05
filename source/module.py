@@ -54,7 +54,6 @@ def split_data(df, date):
     index = data.index[data['date'] == date][0]
     X = data.drop(columns=['index', 'date', 'close'], axis=1).to_numpy()
     y = data['close'].to_numpy()
-    st.write(X.shape)
     return X, y, index
 
 def show_errors(y_train, y_test, train_prediction, test_prediction):
@@ -77,12 +76,12 @@ def plot_results(df, train_size, prediction):
     axs[0].plot(df['date'][:train_size], df['close'][:train_size], color='black')
     axs[0].plot(df['date'][train_size:], df['close'][train_size:], color='green')
     axs[0].plot(df['date'][train_size:], prediction, color='red')
-    axs[0].legend(['train', 'test', 'prediction'], prop={'size': 84})
+    axs[0].legend(['train', 'test', 'prediction'], prop={'size': 24})
 
     axs[1].set_title("Zoomed on prediction")
     axs[1].plot(df['date'][train_size:], df['close'][train_size:], color='green')
     axs[1].plot(df['date'][train_size:], prediction, color='red')
-    axs[1].legend(['test', 'prediction'], prop={'size': 84})
+    axs[1].legend(['test', 'prediction'], prop={'size': 24})
 
     for ax in axs.flat:
         ax.set(xlabel="Time", ylabel="Price in $")
