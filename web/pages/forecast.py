@@ -1,16 +1,24 @@
 import streamlit as st
+from PIL import Image
+import numpy as np
+import pandas as pd
+pd.options.mode.chained_assignment = None
+from matplotlib import pyplot as plt
+from sklearn.preprocessing import MinMaxScaler
+
 import sys
 sys.path.append('../')
 sys.path.append('../../')
 from source import module
-from streamlit_app import start_prediction, df
+from main_page import start_prediction, df
 
 
-import numpy as np
-import pandas as pd
-from matplotlib import pyplot as plt
-from sklearn.preprocessing import MinMaxScaler
+# Web Icon
+darius = Image.open("imgs/darius.gif")
+st.set_page_config(page_title="Crypto Price Prediction", page_icon=darius)
 
+st.markdown("# Forecast 📈")
+st.sidebar.markdown("# Forecast 📈")
 
 try:
     X, y, index = module.split_data(df, str(start_prediction))
@@ -18,17 +26,16 @@ except:
     st.write("Please choose a date within the range you chose")
     st.stop()
 
-
-st.subheader("Forecasting")
-
+# Scaling the data
 y = y.reshape(-1, 1)
 scaler = MinMaxScaler(feature_range=(0, 1))
 scaler = scaler.fit(y)
 y = scaler.transform(y)
 
-
+# Sliders for lookback / forecast periods
 n_lookback = st.slider("Lookback period", min_value=0, max_value=len(df), value=30)
 n_forecast = st.slider("Forecast period", min_value=0, max_value=30, value=10)
+
 
 X_forecast = []
 y_forecast = []
@@ -40,6 +47,7 @@ for i in range(n_lookback, len(y) - n_forecast + 1):
 X_forecast = np.array(X_forecast)
 y_forecast = np.array(y_forecast)
 
+# LSTM options
 lstm_neurons = 100
 epochs = 50
 batch_size = 32
@@ -59,7 +67,7 @@ X_ = X_.reshape(1, n_lookback, 1)
 y_ = forecast_model.predict(X_).reshape(-1, 1)
 y_ = scaler.inverse_transform(y_)
 
-# organize the results in a data frame
+# organize the results in data frames
 df_past = df[['date', 'close']]
 df_past['Forecast'] = np.nan
 df_past['Forecast'].iloc[-1] = df_past['close'].iloc[-1]

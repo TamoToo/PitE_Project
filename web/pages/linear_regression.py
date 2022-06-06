@@ -1,56 +1,51 @@
 import streamlit as st
+from PIL import Image
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import GridSearchCV
+
 import sys
 sys.path.append('../')
 sys.path.append('../../')
 from source import module
-from streamlit_app import start_prediction, df
+from main_page import start_prediction, df
 
-from sklearn.linear_model import LinearRegression
-from sklearn.model_selection import GridSearchCV
 
+# Web Icon
+darius = Image.open("imgs/darius.gif")
+st.set_page_config(page_title="Crypto Price Prediction", page_icon=darius)
+
+st.markdown("# Linear Regression 🪄")
+st.sidebar.markdown("# Linear Regression 🪄")
+
+# Write previous informations
 st.write(start_prediction)
-st.write(df)
+st.dataframe(df)
 
+# Split the data
 try:
     X, y, index = module.split_data(df, str(start_prediction))
 except:
     st.write("Please choose a date within the range you chose")
     st.stop()
 
-
-st.header("Linear Regression")
-
-
+# Preparing the data
 X_train = X[:index]
 y_train = y[:index]
 X_test = X[index:]
 y_test = y[index:]
 
-lr_gs_model = LinearRegression()
-
-# parameters that we will try to tune
-params_lr_gs = {
-    'n_jobs': range(1, 1000),
-}
-
-param_search = GridSearchCV( estimator=lr_gs_model, param_grid=params_lr_gs,
-                verbose=1)
-                
-param_search.fit(X_train, y_train)
-
-best_score = param_search.best_score_
-best_params = param_search.best_params_
-
-st.write("The best score is: ", best_score, "with the following parameters: ", best_params)
-
-lr_final_model = LinearRegression(**best_params)
-lr_final_model.fit(X_train, y_train)
-lr_final_train_predict=lr_final_model.predict(X_train)
-lr_final_validation_predict=lr_final_model.predict(X_test)
+# Fit / Predict
+lr_model = LinearRegression(n_jobs=1)
+lr_model.fit(X_train, y_train)
+lr_train_prediction = lr_model.predict(X_train)
+lr_test_prediction = lr_model.predict(X_test)
 
 st.write("The linear regression model has been trained...")
 st.write("The linear regression model has been evaluated...")
-module.show_errors(y_train, y_test, lr_final_train_predict, lr_final_validation_predict)
 
+# Show errors (MSE / MAE...)
+module.show_errors(y_train, y_test, lr_train_prediction, lr_test_prediction)
+
+# Plotting results
 train_size = X_train.shape[0]
-module.plot_results(df, train_size, lr_final_validation_predict)
+module.plot_results(df, train_size, lr_test_prediction)

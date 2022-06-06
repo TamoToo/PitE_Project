@@ -1,24 +1,34 @@
+from random import random
 import streamlit as st
+from PIL import Image
+import numpy as np
+from sklearn.preprocessing import MinMaxScaler
+
 import sys
 sys.path.append('../')
 sys.path.append('../../')
 from source import module
-from streamlit_app import start_prediction, df
+from main_page import start_prediction, df
 
-import numpy as np
-from sklearn.preprocessing import MinMaxScaler
+# Web Icon
+darius = Image.open("imgs/darius.gif")
+st.set_page_config(page_title="Crypto Price Prediction", page_icon=darius)
 
+st.markdown("# LSTM 🧠")
+st.sidebar.markdown("# LSTM 🧠")
+
+# Write previous informations
 st.write(start_prediction)
+st.dataframe(df)
 
+# Split the data
 try:
     X, y, index = module.split_data(df, str(start_prediction))
 except:
     st.write("Please choose a date within the range you chose")
     st.stop()
 
-
-st.header("LSTM")
-
+# Preparing the data : Scaling / Reshaping
 X_scaler = MinMaxScaler(feature_range=(0,1))
 y_scaler = MinMaxScaler(feature_range=(0,1))
 
@@ -33,7 +43,8 @@ X_test = X[index:]
 y_test = y[index:]
 X_test = np.reshape(X_test, (X_test.shape[0], X_test.shape[1], 1))
 
-
+# LSTM options
+np.random.seed(0)
 lstm_neurons = 100
 epochs = 50
 batch_size = 32
@@ -41,9 +52,9 @@ loss = 'mse'
 dropout = 0.2
 optimizer = 'adam'
 
-
+# Build and Fit the model
 lstm_model = module.build_lstm_model(X_train, output_size=1, neurons=lstm_neurons, dropout=dropout, loss=loss, optimizer=optimizer)
-hist = lstm_model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=epochs, batch_size=batch_size, verbose=1, shuffle=False)
+hist = lstm_model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=epochs, batch_size=batch_size, verbose=2, shuffle=False)
 
 # make predictions
 lstm_train_prediction = lstm_model.predict(X_train)
@@ -60,7 +71,10 @@ lstm_train_prediction, lstm_test_prediction = lstm_train_prediction.reshape(-1,1
 
 y_train = y_scaler.inverse_transform(y_train)
 y_test = y_scaler.inverse_transform(y_test)
+
+# Show errors (MSE / MAE...)
 module.show_errors(y_train, y_test, lstm_train_prediction, lstm_test_prediction)
 
+# Plotting results
 train_size = X_train.shape[0]
 module.plot_results(df, train_size, lstm_test_prediction)

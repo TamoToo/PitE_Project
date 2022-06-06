@@ -11,9 +11,13 @@ from keras.models import Sequential
 from keras.layers import LSTM, Dense, Dropout, Activation
 from sklearn.metrics import mean_squared_error, mean_absolute_error, explained_variance_score, r2_score
 
-def fetch_data(start=1640991600000, stop=1651356000000, symbol='btcusd', interval='1D', step=86400000):
+@st.cache
+def fetch_data(start=1640991600000, stop=1651356000000, symbol='btcusd', interval='1D'):
+    print(start )
     # Create api instance
     api_v2 = bitfinex.bitfinex_v2.api_v2()
+
+    # Defining intervals in ms
     intervals_dict = {"1m": 60000, "5m": 300000, "15m": 900000, "30m": 1800000, "1h": 3600000, "3h": 10800000, "6h": 21600000, "12h": 43200000, "1D": 86400000, "7D": 604800000, "14D": 1209600000, "1M": 2628000000}
     step = intervals_dict[interval] * 1000
     data = []
@@ -22,22 +26,20 @@ def fetch_data(start=1640991600000, stop=1651356000000, symbol='btcusd', interva
     if stop > time.time() * 1000: # stop value can't be higher than datetime.now()
         stop = datetime.now()
         stop = time.mktime(stop.timetuple()) * 1000
-    if stop - start > step: # if data requested > 1000 * interval
-        while start < stop:
-            if start + step > stop: # if start + 1000 * interval > stop ==> stop = now
-                end = datetime.now()
-                end = time.mktime(end.timetuple()) * 1000
-            else:
-                end = start + step
-            #print(datetime.fromtimestamp(start / 1000), datetime.fromtimestamp(end / 1000))
-            res = api_v2.candles(symbol=symbol, interval=interval, start=start, end=end)
-            data.extend(res)
-            start += step
-            time.sleep(1)
-    else:
-        res = api_v2.candles(symbol=symbol, interval=interval, start=start, end=stop)
+    
+    while stop - start > step: # while data requested > 1000 * interval
+        if start + step > stop: # if start + 1000 * interval > stop ==> stop = now
+            end = datetime.now()
+            end = time.mktime(end.timetuple()) * 1000
+        else:
+            end = start + step
+        #print(datetime.fromtimestamp(start / 1000), datetime.fromtimestamp(end / 1000))
+        res = api_v2.candles(symbol=symbol, interval=interval, start=start, end=end)
         data.extend(res)
-    #print(data)
+        start += step
+        time.sleep(1)
+    res = api_v2.candles(symbol=symbol, interval=interval, start=start, end=stop)
+    data.extend(res)
 
     # Modify data to send back a clean DataFrame
     dataframe = pd.DataFrame(data, columns=names)
@@ -46,6 +48,7 @@ def fetch_data(start=1640991600000, stop=1651356000000, symbol='btcusd', interva
     dataframe.reset_index(inplace=True)
     dataframe.drop('index', axis=1, inplace=True)
     dataframe.rename(columns={'time':'date'}, inplace=True)
+
     return dataframe
 
 def split_data(df, date):
@@ -70,7 +73,7 @@ def show_errors(y_train, y_test, train_prediction, test_prediction):
     st.write("Test data R2 score:", r2_score(y_test, test_prediction))
 
 def plot_results(df, train_size, prediction):
-    f,axs = plt.subplots(1,2,figsize=(40,20))
+    f,axs = plt.subplots(2,1,figsize=(40,20))
 
     axs[0].set_title("All time")
     axs[0].plot(df['date'][:train_size], df['close'][:train_size], color='black')
