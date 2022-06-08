@@ -33,8 +33,8 @@ scaler = scaler.fit(y)
 y = scaler.transform(y)
 
 # Sliders for lookback / forecast periods
-n_lookback = st.slider("Lookback period", min_value=0, max_value=len(df), value=30)
-n_forecast = st.slider("Forecast period", min_value=0, max_value=30, value=10)
+n_lookback = st.slider("Lookback period", min_value=0, max_value=50, value=30)
+n_forecast = st.slider("Forecast period", min_value=0, max_value=10, value=5)
 
 
 X_forecast = []

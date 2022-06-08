@@ -1,5 +1,4 @@
 import pandas as pd
-import numpy as np
 from matplotlib import pyplot as plt
 import bitfinex
 from datetime import datetime
@@ -9,11 +8,10 @@ import streamlit as st
 
 from keras.models import Sequential
 from keras.layers import LSTM, Dense, Dropout, Activation
-from sklearn.metrics import mean_squared_error, mean_absolute_error, explained_variance_score, r2_score
+from sklearn.metrics import mean_squared_error, mean_absolute_error
 
 @st.cache
 def fetch_data(start=1640991600000, stop=1651356000000, symbol='btcusd', interval='1D'):
-    print(start )
     # Create api instance
     api_v2 = bitfinex.bitfinex_v2.api_v2()
 
@@ -55,7 +53,7 @@ def split_data(df, date):
     data = df.copy()
     data.reset_index(inplace=True)
     index = data.index[data['date'] == date][0]
-    X = data.drop(columns=['index', 'date', 'close'], axis=1).to_numpy()
+    X = data.drop(columns=['index', 'date', 'close', 'volume'], axis=1).to_numpy()
     y = data['close'].to_numpy()
     return X, y, index
 
@@ -63,14 +61,10 @@ def show_errors(y_train, y_test, train_prediction, test_prediction):
     st.write("Train data RMSE: ", sqrt(mean_squared_error(y_train,train_prediction)))
     st.write("Train data MSE: ", mean_squared_error(y_train,train_prediction))
     st.write("Train data MAE: ", mean_absolute_error(y_train,train_prediction))
-    st.write("Train data explained variance regression score:", explained_variance_score(y_train, train_prediction))
-    st.write("Train data R2 score:", r2_score(y_train, train_prediction))
     st.write("-------------------------------------------------------------------------------------")
     st.write("Test data RMSE: ", sqrt(mean_squared_error(y_test,test_prediction)))
     st.write("Test data MSE: ", mean_squared_error(y_test,test_prediction))
     st.write("Test data MAE: ", mean_absolute_error(y_test,test_prediction))
-    st.write("Test data explained variance regression score:", explained_variance_score(y_test, test_prediction))
-    st.write("Test data R2 score:", r2_score(y_test, test_prediction))
 
 def plot_results(df, train_size, prediction):
     f,axs = plt.subplots(2,1,figsize=(40,20))
